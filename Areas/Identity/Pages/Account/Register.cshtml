@@ -36,16 +36,25 @@
             </div>
 
             <div class="form-floating mb-3">
-                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <input asp-for="Input.Password" class="form-control" id="password" autocomplete="password" aria-required="true" placeholder="Password" />
                 <label asp-for="Input.Password">Password</label>
+                    <button type="button"
+                            class="btn btn-sm"
+                            id="togglePassword"
+                            aria-label="Toggle password"
+                            style="position:absolute; right:6px; top:50%; transform:translateY(-50%); padding:0.18rem 0.35rem;">
+                        <span id="eyeIcon">🙈</span>
+                    </button>
+
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
 
             <div class="form-floating mb-3">
-                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <input asp-for="Input.ConfirmPassword" class="form-control" id="confirmPassword" autocomplete="password" aria-required="true" placeholder="Confirmed Password" />
                 <label asp-for="Input.ConfirmPassword">Confirm Password</label>
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
             </div>
+
             <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
         </form>
     </div>
@@ -53,4 +62,20 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('togglePassword')?.addEventListener('click', function () {
+          const inp = document.getElementById('password');
+          if (!inp) return;
+          if (inp.type === 'password') {
+            inp.type = 'text';
+            document.getElementById('eyeIcon').textContent = '👁️';
+          } else {
+            inp.type = 'password';
+            document.getElementById('eyeIcon').textContent = '🙈';
+          }
+        });
+    </script>
+
+
 }
+

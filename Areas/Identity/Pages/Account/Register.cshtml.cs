@@ -18,9 +18,11 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using POETWeb.Models;
 using POETWeb.Helpers;
+using POETWeb.Models;
+
 
 namespace POETWeb.Areas.Identity.Pages.Account
 {
@@ -85,9 +87,12 @@ namespace POETWeb.Areas.Identity.Pages.Account
             [Display(Name = "Full Name")]
             public string FullName { get; set; }
 
-            [Phone(ErrorMessage = "Invalid phone number format")]
+            [Phone]
+            [RegularExpression(@"^(0|\+84)(\d{9})$",
+            ErrorMessage = "Invalid Phone Number. Please enter 10 digits number start by 0 or +84")]
             [Display(Name = "Phone Number")]
             public string PhoneNumber { get; set; }
+
 
             [Required(ErrorMessage = "Email is required")]
             [EmailAddress(ErrorMessage = "Invalid email format")]
@@ -124,10 +129,18 @@ namespace POETWeb.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
+                var existingName = await _userManager.FindByNameAsync(Input.UserName);
+                if (existingName != null)
+                {
+                    ModelState.AddModelError("Input.UserName", "User name is already taken.");
+                    return Page();
+                }
+
+
                 var existingUser = await _userManager.FindByEmailAsync(Input.Email);
                 if (existingUser != null)
                 {
-                    ModelState.AddModelError("Input.Email", "Email is already in use.");
+                    ModelState.AddModelError("Input.Email", "Email is already taken.");
                     return Page();
                 }
 
@@ -137,10 +150,21 @@ namespace POETWeb.Areas.Identity.Pages.Account
                 user.UserName = Input.UserName;        // username
                 user.FullName = Input.FullName;        // fullname
                 user.PhoneNumber = Input.PhoneNumber;  // phone number
-                user.AccountCode = Helpers.CodeGenerator.GenerateAccountCode(); // auto code
+                user.AccountCode = await Helpers.CodeGenerator.GenerateUniqueAccountCodeAsync(_userManager);                // auto code
                 user.AvatarUrl = null;
 
                 var result = await _userManager.CreateAsync(user, Input.Password);
+
+                // Nếu dính race condition do index unique, thử lại 1 lần
+                if (!result.Succeeded && result.Errors.Any(e =>
+                        (e.Code?.Contains("Duplicate", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (e.Description?.Contains("duplicate", StringComparison.OrdinalIgnoreCase) ?? false)))
+                {
+                    user.AccountCode = await Helpers.CodeGenerator.GenerateUniqueAccountCodeAsync(_userManager);
+
+                    result = await _userManager.CreateAsync(user, Input.Password);
+                }
+
 
                 if (result.Succeeded)
                 {
